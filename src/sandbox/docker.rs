@@ -74,6 +74,8 @@ impl DockerSandbox {
             .arg("/workspace")
             .arg("--tmpfs")
             .arg("/tmp:rw,noexec,nosuid,nodev,size=64m")
+            .arg("--tmpfs")
+            .arg("/sandbox:rw,nosuid,nodev,size=128m,mode=1777")
             .arg("--mount")
             .arg(format!(
                 "type=bind,source={},target=/workspace,readonly",

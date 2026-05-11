@@ -12,8 +12,8 @@ use crate::{
 #[openapi(
     info(
         title = "sandbox-rs API",
-        version = "0.1.0",
-        description = "Execute JavaScript, TypeScript, and Python snippets in sandboxed containers."
+        version = env!("CARGO_PKG_VERSION"),
+        description = "Execute mainstream programming-language snippets in sandboxed containers."
     ),
     paths(api::health, api::languages, api::execute),
     components(schemas(

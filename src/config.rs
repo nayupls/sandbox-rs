@@ -31,12 +31,12 @@ impl Config {
             max_output_bytes: parse_env("SANDBOX_MAX_OUTPUT_BYTES", "65536")?,
             default_timeout: Duration::from_millis(parse_env(
                 "SANDBOX_DEFAULT_TIMEOUT_MS",
-                "3000",
+                "10000",
             )?),
-            max_timeout: Duration::from_millis(parse_env("SANDBOX_MAX_TIMEOUT_MS", "10000")?),
-            memory: string_env("SANDBOX_MEMORY", "128m"),
-            cpus: string_env("SANDBOX_CPUS", "0.5"),
-            pids_limit: parse_env("SANDBOX_PIDS_LIMIT", "64")?,
+            max_timeout: Duration::from_millis(parse_env("SANDBOX_MAX_TIMEOUT_MS", "30000")?),
+            memory: string_env("SANDBOX_MEMORY", "1024m"),
+            cpus: string_env("SANDBOX_CPUS", "1.0"),
+            pids_limit: parse_env("SANDBOX_PIDS_LIMIT", "128")?,
         })
     }
 }

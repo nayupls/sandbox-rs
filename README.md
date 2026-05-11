@@ -4,17 +4,20 @@
 ![Axum](https://img.shields.io/badge/Axum-0.8-blue)
 ![Docker](https://img.shields.io/badge/Sandbox-Docker-2496ED?logo=docker&logoColor=white)
 ![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white)
-![Languages](https://img.shields.io/badge/Languages-JS%20%7C%20TS%20%7C%20Python-blueviolet)
+![Version](https://img.shields.io/badge/Version-0.1.0--alpha.0-informational)
+![Languages](https://img.shields.io/badge/Languages-16%20runtimes-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-HTTP API for executing JavaScript, TypeScript, and Python snippets in short-lived Docker sandboxes.
+HTTP API for executing mainstream programming-language snippets in short-lived Docker sandboxes.
 
 The API accepts source code and optional stdin, runs the code on the server in an isolated container, and returns stdout, stderr, exit status, timeout state, and duration.
 
 ## Features
 
 - JavaScript and TypeScript execution through Deno
+- Node.js JavaScript execution
 - Python execution through the official Python Docker image
+- Bash, C, C++, C#, Go, Java, PHP, Perl, R, Ruby, Rust, and Swift runtimes
 - Fresh container per request
 - Network disabled for executed code
 - CPU, memory, pid, timeout, input, and output limits
@@ -35,6 +38,7 @@ Untrusted code is never executed directly by the Rust process. Each request is d
 - `--cpus`, `--memory`, `--memory-swap`, and `--pids-limit`
 - read-only bind mount for the generated source file
 - isolated tmpfs at `/tmp`
+- separate writable tmpfs at `/sandbox` for compiler outputs
 - wall-clock timeout with forced container cleanup
 - `--pull never` so execution requests do not trigger image downloads
 
@@ -46,14 +50,13 @@ This is a practical baseline, not a complete hostile-code containment guarantee.
 - Docker available to the API process
 - Runtime images pulled before starting or testing execution
 
-Pull the runtime images:
+Pull all runtime images:
 
 ```sh
-docker pull python:3.14-alpine
-docker pull denoland/deno:alpine
+./scripts/init-runtimes.sh
 ```
 
-If Docker reports a tag is missing, verify Docker can reach Docker Hub and that Docker Desktop or your Docker daemon is running. The API does not pull images during code execution.
+The full runtime set includes some large compiler images, especially Swift, .NET, R, Rust, and GCC. If Docker reports a tag is missing, verify Docker can reach Docker Hub or Microsoft Container Registry and that Docker Desktop or your Docker daemon is running. The API does not pull images during code execution.
 
 ## Quick Start
 
@@ -128,6 +131,19 @@ curl -s http://127.0.0.1:8080/v1/execute \
   }'
 ```
 
+Node.js:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/execute \
+  -H 'content-type: application/json' \
+  -d '{
+    "language": "node",
+    "code": "const fs = await import(\"node:fs/promises\");\nconst name = (await fs.readFile(0, \"utf8\")).trim() || \"world\";\nconsole.log(`hello ${name}`);",
+    "stdin": "Nathan",
+    "timeout_ms": 3000
+  }'
+```
+
 Example response:
 
 ```json
@@ -145,9 +161,24 @@ Example response:
 
 Supported language names:
 
-- `javascript`, `js`
-- `typescript`, `ts`
-- `python`, `py`
+| Language | Aliases | Image |
+| --- | --- | --- |
+| `javascript` | `js` | `denoland/deno:alpine` |
+| `typescript` | `ts` | `denoland/deno:alpine` |
+| `python` | `py` | `python:3.14-alpine` |
+| `bash` | `sh`, `shell` | `bash:5.3-alpine3.23` |
+| `c` | `c99`, `c11`, `c17` | `gcc:15` |
+| `cpp` | `c++`, `cc`, `cxx` | `gcc:15` |
+| `csharp` | `cs`, `c#` | `mcr.microsoft.com/dotnet/sdk:10.0.102-noble` |
+| `go` | `golang` | `golang:1.26-alpine` |
+| `java` | `jdk` | `eclipse-temurin:21-jdk-alpine` |
+| `node` | `nodejs` | `node:25-alpine` |
+| `perl` | `pl` | `perl:5.42-slim` |
+| `php` | | `php:8.4-cli-alpine` |
+| `r` | `rscript` | `r-base:4.5.3` |
+| `ruby` | `rb` | `ruby:3.4-alpine` |
+| `rust` | `rs` | `rust:1.95.0-alpine3.22` |
+| `swift` | | `swift:6.3-noble` |
 
 ## API Reference
 
@@ -180,11 +211,11 @@ Request body for `POST /v1/execute`:
 | `SANDBOX_MAX_CODE_BYTES` | `65536` | Maximum submitted source size |
 | `SANDBOX_MAX_STDIN_BYTES` | `65536` | Maximum stdin size |
 | `SANDBOX_MAX_OUTPUT_BYTES` | `65536` | Maximum captured stdout and stderr bytes per stream |
-| `SANDBOX_DEFAULT_TIMEOUT_MS` | `3000` | Default execution timeout |
-| `SANDBOX_MAX_TIMEOUT_MS` | `10000` | Maximum accepted timeout |
-| `SANDBOX_MEMORY` | `128m` | Docker memory limit |
-| `SANDBOX_CPUS` | `0.5` | Docker CPU quota |
-| `SANDBOX_PIDS_LIMIT` | `64` | Docker process limit |
+| `SANDBOX_DEFAULT_TIMEOUT_MS` | `10000` | Default execution timeout |
+| `SANDBOX_MAX_TIMEOUT_MS` | `30000` | Maximum accepted timeout |
+| `SANDBOX_MEMORY` | `1024m` | Docker memory limit |
+| `SANDBOX_CPUS` | `1.0` | Docker CPU quota |
+| `SANDBOX_PIDS_LIMIT` | `128` | Docker process limit |
 
 Example:
 
@@ -207,6 +238,24 @@ To add a runtime:
 4. Add tests for alias resolution and a README example.
 
 The API handler and Docker sandbox runner do not need language-specific branches for normal runtimes.
+
+Also update `scripts/init-runtimes.sh` so deployment setup pulls the new image.
+
+## Versioning
+
+This project uses SemVer. The current version is `0.1.0-alpha.0`.
+
+Pre-`1.0.0` releases may change API details, runtime image tags, and sandbox behavior while the project is still hardening.
+
+## Roadmap
+
+- `0.1.x`: stabilize request/response schema, runtime registry, init script, and OpenAPI docs.
+- `0.2.x`: add request concurrency limits, queueing, structured execution logs, and better error codes for missing images.
+- `0.3.x`: pin runtime images by digest and add image verification tooling.
+- `0.4.x`: add configurable runtime profiles and per-language timeout/resource defaults.
+- `0.5.x`: add authentication, rate limiting hooks, and deployment examples.
+- `0.6.x`: evaluate stronger isolation backends such as gVisor, Kata Containers, or Firecracker.
+- `1.0.0`: stable API contract, documented production hardening guide, and compatibility policy.
 
 ## Development
 

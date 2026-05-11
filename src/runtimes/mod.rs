@@ -1,6 +1,7 @@
 use crate::{error::AppError, models::LanguageInfo};
 
 mod deno;
+mod mainstream;
 mod python;
 
 #[derive(Debug, Clone, Copy)]
@@ -27,7 +28,24 @@ impl RuntimeSpec {
 }
 
 pub fn all() -> &'static [RuntimeSpec] {
-    &[deno::JAVASCRIPT, deno::TYPESCRIPT, python::PYTHON]
+    &[
+        deno::JAVASCRIPT,
+        deno::TYPESCRIPT,
+        python::PYTHON,
+        mainstream::BASH,
+        mainstream::C,
+        mainstream::CPP,
+        mainstream::CSHARP,
+        mainstream::GO,
+        mainstream::JAVA,
+        mainstream::NODE,
+        mainstream::PERL,
+        mainstream::PHP,
+        mainstream::R,
+        mainstream::RUBY,
+        mainstream::RUST,
+        mainstream::SWIFT,
+    ]
 }
 
 pub fn list() -> Vec<LanguageInfo> {
@@ -62,6 +80,27 @@ mod tests {
         assert_eq!(resolve("ts").unwrap().id, "typescript");
         assert_eq!(resolve("python").unwrap().id, "python");
         assert_eq!(resolve("py").unwrap().id, "python");
+        assert_eq!(resolve("bash").unwrap().id, "bash");
+        assert_eq!(resolve("sh").unwrap().id, "bash");
+        assert_eq!(resolve("c").unwrap().id, "c");
+        assert_eq!(resolve("cpp").unwrap().id, "cpp");
+        assert_eq!(resolve("c++").unwrap().id, "cpp");
+        assert_eq!(resolve("csharp").unwrap().id, "csharp");
+        assert_eq!(resolve("cs").unwrap().id, "csharp");
+        assert_eq!(resolve("go").unwrap().id, "go");
+        assert_eq!(resolve("golang").unwrap().id, "go");
+        assert_eq!(resolve("java").unwrap().id, "java");
+        assert_eq!(resolve("node").unwrap().id, "node");
+        assert_eq!(resolve("nodejs").unwrap().id, "node");
+        assert_eq!(resolve("perl").unwrap().id, "perl");
+        assert_eq!(resolve("php").unwrap().id, "php");
+        assert_eq!(resolve("r").unwrap().id, "r");
+        assert_eq!(resolve("rscript").unwrap().id, "r");
+        assert_eq!(resolve("ruby").unwrap().id, "ruby");
+        assert_eq!(resolve("rb").unwrap().id, "ruby");
+        assert_eq!(resolve("rust").unwrap().id, "rust");
+        assert_eq!(resolve("rs").unwrap().id, "rust");
+        assert_eq!(resolve("swift").unwrap().id, "swift");
     }
 
     #[test]
@@ -71,7 +110,33 @@ mod tests {
 
     #[test]
     fn rejects_unknown_language() {
-        let err = resolve("ruby").unwrap_err();
+        let err = resolve("klingon").unwrap_err();
         assert!(matches!(err, AppError::UnsupportedLanguage(_)));
+    }
+
+    #[test]
+    fn init_script_pulls_all_runtime_images() {
+        let init_script = include_str!("../../scripts/init-runtimes.sh");
+
+        for runtime in all() {
+            assert!(
+                init_script.contains(runtime.image),
+                "missing {} from init script",
+                runtime.image
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_ids_are_unique() {
+        let mut ids = std::collections::HashSet::new();
+
+        for runtime in all() {
+            assert!(
+                ids.insert(runtime.id),
+                "duplicate runtime id {}",
+                runtime.id
+            );
+        }
     }
 }
