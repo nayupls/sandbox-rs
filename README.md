@@ -249,13 +249,7 @@ Pre-`1.0.0` releases may change API details, runtime image tags, and sandbox beh
 
 ## Roadmap
 
-- `0.1.x`: stabilize request/response schema, runtime registry, init script, and OpenAPI docs.
-- `0.2.x`: add request concurrency limits, queueing, structured execution logs, and better error codes for missing images.
-- `0.3.x`: pin runtime images by digest and add image verification tooling.
-- `0.4.x`: add configurable runtime profiles and per-language timeout/resource defaults.
-- `0.5.x`: add authentication, rate limiting hooks, and deployment examples.
-- `0.6.x`: evaluate stronger isolation backends such as gVisor, Kata Containers, or Firecracker.
-- `1.0.0`: stable API contract, documented production hardening guide, and compatibility policy.
+Not yet sure
 
 ## Development
 
