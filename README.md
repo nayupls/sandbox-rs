@@ -23,13 +23,13 @@ This is a defense-in-depth baseline, not a replacement for a hardened container 
 - Docker available to the API process
 - Images:
   - `denoland/deno:alpine`
-  - `python:3.12-alpine`
+  - `python:3.14-alpine`
 
 Pull them with:
 
 ```sh
 docker pull denoland/deno:alpine
-docker pull python:3.12-alpine
+docker pull python:3.14-alpine
 ```
 
 ## Run
@@ -120,4 +120,3 @@ Response:
   "stderr_truncated": false
 }
 ```
-
