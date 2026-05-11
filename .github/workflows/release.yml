@@ -1,0 +1,190 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer version to release without a leading v, for example 0.1.0-alpha.1
+        required: true
+        type: string
+      release_title:
+        description: Optional GitHub Release title. Defaults to sandbox-rs v<version>.
+        required: false
+        type: string
+      release_notes:
+        description: Release notes or changelog text.
+        required: true
+        type: string
+      draft:
+        description: Create the GitHub Release as a draft.
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: Mark the GitHub Release as a prerelease.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt
+
+      - name: Prepare release values
+        id: release
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          TITLE: ${{ inputs.release_title }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "version must be valid SemVer without a leading v" >&2
+            exit 1
+          fi
+
+          TAG="v$VERSION"
+          git fetch --tags --force
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG already exists" >&2
+            exit 1
+          fi
+
+          if [[ -z "$TITLE" ]]; then
+            TITLE="sandbox-rs $TAG"
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "badge_version=${VERSION//-/--}"
+            echo "tag=$TAG"
+            echo "title=$TITLE"
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update project version
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          BADGE_VERSION: ${{ steps.release.outputs.badge_version }}
+        run: |
+          set -euo pipefail
+          perl -0pi -e 's/^version = "[^"]+"/version = "$ENV{VERSION}"/m' Cargo.toml
+          perl -0pi -e 's/(name = "sandbox-rs"\nversion = ")[^"]+/$1$ENV{VERSION}/' Cargo.lock
+          perl -0pi -e 's#https://img.shields.io/badge/Version-[^)]+-informational#https://img.shields.io/badge/Version-$ENV{BADGE_VERSION}-informational#' README.md
+          perl -0pi -e 's/current version is `[^`]+`/current version is `$ENV{VERSION}`/' README.md
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Check
+        run: cargo check --locked
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Build release binary
+        run: cargo build --locked --release
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/sandbox-rs
+          cp target/release/sandbox-rs dist/sandbox-rs/
+          cp README.md LICENSE dist/sandbox-rs/
+          tar -C dist -czf "dist/sandbox-rs-x86_64-unknown-linux-gnu.tar.gz" sandbox-rs
+          sha256sum "dist/sandbox-rs-x86_64-unknown-linux-gnu.tar.gz" > "dist/sandbox-rs-x86_64-unknown-linux-gnu.tar.gz.sha256"
+
+      - name: Write release notes
+        run: |
+          cat > RELEASE_NOTES.md <<'RELEASE_NOTES'
+          ${{ inputs.release_notes }}
+          RELEASE_NOTES
+
+      - name: Commit version and tag locally
+        shell: bash
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          TITLE: ${{ steps.release.outputs.title }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock README.md
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Release $TAG"
+          fi
+
+          git tag -a "$TAG" -m "$TITLE"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract release image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.release.outputs.image }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.version }}
+            type=raw,value=${{ steps.release.outputs.tag }}
+            type=raw,value=latest,enable=${{ inputs.prerelease == false }}
+
+      - name: Build and publish release image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push release commit and tag
+        shell: bash
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: ${{ steps.release.outputs.title }}
+          body_path: RELEASE_NOTES.md
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          files: |
+            dist/sandbox-rs-x86_64-unknown-linux-gnu.tar.gz
+            dist/sandbox-rs-x86_64-unknown-linux-gnu.tar.gz.sha256

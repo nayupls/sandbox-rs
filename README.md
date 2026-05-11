@@ -84,6 +84,30 @@ OpenAPI document:
 http://127.0.0.1:8080/openapi.json
 ```
 
+## Container Image
+
+GitHub Actions publishes the API image to GHCR on pushes to `main` or `master`:
+
+```text
+ghcr.io/<owner>/<repo>:<branch>
+ghcr.io/<owner>/<repo>:sha-<commit>
+```
+
+Run the published image with access to the host Docker daemon:
+
+```sh
+docker run --rm \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/<owner>/<repo>:master
+```
+
+The sandbox runtime images still need to exist on the Docker daemon used by the API. Pull them on the same host with:
+
+```sh
+./scripts/init-runtimes.sh
+```
+
 ## Execute Code
 
 Endpoint:
@@ -246,6 +270,30 @@ Also update `scripts/init-runtimes.sh` so deployment setup pulls the new image.
 This project uses SemVer. The current version is `0.1.0-alpha.0`.
 
 Pre-`1.0.0` releases may change API details, runtime image tags, and sandbox behavior while the project is still hardening.
+
+## Release Flow
+
+Releases are created only through the manual `Release` GitHub Actions workflow.
+
+The workflow asks for:
+
+- `version`: SemVer without a leading `v`, for example `0.1.0-alpha.1`
+- `release_title`: optional GitHub Release title
+- `release_notes`: release description or changelog text
+- `draft`: whether to create the GitHub Release as a draft
+- `prerelease`: whether to mark the release as a prerelease
+
+When triggered, the workflow:
+
+1. validates the version
+2. updates `Cargo.toml` and `Cargo.lock`
+3. runs formatting, check, tests, and release build
+4. commits the version change
+5. creates an annotated `v<version>` tag
+6. publishes versioned GHCR images
+7. creates a GitHub Release with a Linux binary tarball and checksum
+
+Make sure repository Actions permissions allow `contents: write` and `packages: write` for `GITHUB_TOKEN`.
 
 ## Roadmap
 

@@ -1,0 +1,9 @@
+/.git
+/.github
+/.agents
+/.codex
+/target
+*.md
+!README.md
+Dockerfile
+.dockerignore
