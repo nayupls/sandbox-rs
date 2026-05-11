@@ -5,6 +5,7 @@
 ![Docker](https://img.shields.io/badge/Sandbox-Docker-2496ED?logo=docker&logoColor=white)
 ![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white)
 ![Languages](https://img.shields.io/badge/Languages-JS%20%7C%20TS%20%7C%20Python-blueviolet)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 HTTP API for executing JavaScript, TypeScript, and Python snippets in short-lived Docker sandboxes.
 
@@ -258,4 +259,4 @@ Increase `timeout_ms` up to `SANDBOX_MAX_TIMEOUT_MS`, or tune the server default
 
 ## License
 
-No license has been specified yet. Add a license before publishing if you want other people to reuse, modify, or distribute this project.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
