@@ -21,7 +21,7 @@ This is a defense-in-depth baseline, not a replacement for a hardened container 
 
 - Rust 1.76+
 - Docker available to the API process
-- Images:
+- Pre-pulled runtime images:
   - `denoland/deno:alpine`
   - `python:3.14-alpine`
 
@@ -31,6 +31,8 @@ Pull them with:
 docker pull denoland/deno:alpine
 docker pull python:3.14-alpine
 ```
+
+Execution requests do not pull images automatically. Missing runtime images fail fast instead of turning a code execution request into a network-dependent image download.
 
 ## Run
 

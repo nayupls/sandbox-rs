@@ -48,6 +48,8 @@ impl DockerSandbox {
         command
             .arg("run")
             .arg("--rm")
+            .arg("--pull")
+            .arg("never")
             .arg("--name")
             .arg(container_name)
             .arg("--interactive")
