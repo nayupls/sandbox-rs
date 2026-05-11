@@ -3,8 +3,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde::Serialize;
 use thiserror::Error;
+
+use crate::models::{ErrorBody, ErrorResponse};
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -18,17 +19,6 @@ pub enum AppError {
     Sandbox(String),
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: ErrorBody,
-}
-
-#[derive(Serialize)]
-struct ErrorBody {
-    code: &'static str,
-    message: String,
 }
 
 impl IntoResponse for AppError {

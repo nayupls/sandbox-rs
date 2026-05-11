@@ -44,6 +44,18 @@ The server listens on `127.0.0.1:8080` by default.
 curl -s http://127.0.0.1:8080/health
 ```
 
+Swagger UI is available at:
+
+```text
+http://127.0.0.1:8080/docs
+```
+
+The OpenAPI document is available at:
+
+```text
+http://127.0.0.1:8080/openapi.json
+```
+
 ## Execute Code
 
 ```sh
@@ -90,6 +102,10 @@ Environment variables:
 ## API
 
 `GET /health`
+
+`GET /docs`
+
+`GET /openapi.json`
 
 `GET /v1/languages`
 

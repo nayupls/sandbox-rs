@@ -2,6 +2,7 @@ mod api;
 mod config;
 mod error;
 mod models;
+mod openapi;
 mod runtimes;
 mod sandbox;
 
@@ -12,6 +13,8 @@ use config::Config;
 use sandbox::docker::DockerSandbox;
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -40,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/health", get(api::health))
         .route("/v1/languages", get(api::languages))
         .route("/v1/execute", post(api::execute))
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", openapi::ApiDoc::openapi()))
         .with_state(state);
 
     let listener = TcpListener::bind(config.bind_addr).await?;

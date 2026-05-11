@@ -16,8 +16,12 @@ pub struct RuntimeSpec {
 impl RuntimeSpec {
     pub fn info(self) -> LanguageInfo {
         LanguageInfo {
-            id: self.id,
-            aliases: self.aliases,
+            id: self.id.to_owned(),
+            aliases: self
+                .aliases
+                .iter()
+                .map(|alias| (*alias).to_owned())
+                .collect(),
         }
     }
 }

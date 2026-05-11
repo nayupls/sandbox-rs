@@ -4,22 +4,49 @@ use axum::{extract::State, Json};
 
 use crate::{
     error::AppError,
-    models::{ExecuteRequest, ExecuteResponse, HealthResponse, LanguagesResponse},
+    models::{ErrorResponse, ExecuteRequest, ExecuteResponse, HealthResponse, LanguagesResponse},
     runtimes,
     sandbox::{SandboxExecutor, SandboxRequest},
     AppState,
 };
 
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "system",
+    responses(
+        (status = 200, description = "Service is healthy", body = HealthResponse)
+    )
+)]
 pub async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { ok: true })
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/languages",
+    tag = "system",
+    responses(
+        (status = 200, description = "Supported sandbox runtimes", body = LanguagesResponse)
+    )
+)]
 pub async fn languages() -> Json<LanguagesResponse> {
     Json(LanguagesResponse {
         languages: runtimes::list(),
     })
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/execute",
+    tag = "execution",
+    request_body = ExecuteRequest,
+    responses(
+        (status = 200, description = "Sandbox execution completed", body = ExecuteResponse),
+        (status = 400, description = "Invalid request or unsupported language", body = ErrorResponse),
+        (status = 500, description = "Sandbox or server failure", body = ErrorResponse)
+    )
+)]
 pub async fn execute(
     State(state): State<AppState>,
     Json(request): Json<ExecuteRequest>,
